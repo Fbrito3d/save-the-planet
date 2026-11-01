@@ -400,6 +400,8 @@
         let waveEnemiesSpawned = 0;
         let waveTotalEnemies = 5;
         let waveBannerTimer = 0;
+        let bossActive = false;
+        let boss = null;
 
         // Entities
         let stars = [];
@@ -576,6 +578,26 @@
             waveEnemiesSpawned = 0;
             waveTotalEnemies = 4 + (currentWave * 2);
             waveBannerTimer = 140;
+
+            // Se for múltiplo de 10, invoca o Chefe!
+            if (currentWave % 10 === 0) {
+                spawnBoss();
+            }
+        }
+
+        function spawnBoss() {
+            bossActive = true;
+            let bossHp = 50 + (currentWave * 10);
+            boss = {
+                x: canvas.width / 2,
+                y: -100,
+                targetY: canvas.height * 0.2,
+                radius: 45,
+                hp: bossHp,
+                maxHp: bossHp,
+                angle: 0,
+                attackTimer: 0
+            };
         }
 
         function createPlanetDebris(x, y) {
@@ -603,6 +625,8 @@
             waveEnemiesSpawned = 0;
             waveTotalEnemies = 5;
             waveBannerTimer = 120;
+            bossActive = false;
+            boss = null;
             ship.weaponLevel = 1;
             ship.angle = -Math.PI / 2;
             bullets = [];
@@ -648,17 +672,88 @@
 
             if (waveBannerTimer > 0) waveBannerTimer--;
 
-            enemySpawnTimer++;
-            
-            let maxSimultaneousEnemies = currentWave < 3 ? 1 : Math.min(4, Math.floor(currentWave / 2) + 1);
-
-            if (waveEnemiesSpawned < waveTotalEnemies) {
-                if (enemies.length < maxSimultaneousEnemies && enemySpawnTimer > 70) {
-                    spawnEnemy();
-                    enemySpawnTimer = 0;
+            // --- LÓGICA DO CHEFE ---
+            if (bossActive && boss) {
+                boss.angle += 0.01;
+                if (boss.y < boss.targetY) {
+                    boss.y += 1;
+                } else {
+                    // Movimento lateral suave
+                    boss.x = (canvas.width / 2) + Math.sin(Date.now() * 0.0015) * (canvas.width * 0.25);
+                    
+                    // Chefe lança cometas periodically
+                    boss.attackTimer++;
+                    if (boss.attackTimer > 100) {
+                        boss.attackTimer = 0;
+                        let angle = Math.atan2(planet.y - boss.y, planet.x - boss.x);
+                        enemies.push({
+                            x: boss.x,
+                            y: boss.y,
+                            vx: Math.cos(angle) * 1.2,
+                            vy: Math.sin(angle) * 1.2,
+                            radius: 12,
+                            type: 'asteroid',
+                            hp: 1,
+                            angle: 0,
+                            rotSpeed: 0.05
+                        });
+                    }
                 }
-            } else if (enemies.length === 0 && waveBannerTimer <= 0) {
-                startNextWave();
+
+                // Colisão de projéteis no Chefe
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
+                    let dist = Math.hypot(boss.x - b.x, boss.y - b.y);
+                    if (dist < boss.radius + b.radius) {
+                        boss.hp--;
+                        bullets.splice(j, 1);
+
+                        for (let p = 0; p < 5; p++) {
+                            particles.push({
+                                x: b.x, y: b.y,
+                                vx: (Math.random() - 0.5) * 5,
+                                vy: (Math.random() - 0.5) * 5,
+                                radius: 3,
+                                color: '#f43f5e',
+                                life: 25
+                            });
+                        }
+
+                        if (boss.hp <= 0) {
+                            score += 2500;
+                            sfx.playExplode();
+
+                            // Solta vários powerups ao derrotar o chefe
+                            for (let k = 0; k < 3; k++) {
+                                powerups.push({
+                                    x: boss.x + (Math.random() - 0.5) * 40,
+                                    y: boss.y + (Math.random() - 0.5) * 40,
+                                    type: k === 0 ? 'heal' : 'weapon',
+                                    radius: 12,
+                                    pulse: 0
+                                });
+                            }
+
+                            bossActive = false;
+                            boss = null;
+                            updateUI();
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // Inimigos normais só nascem se não houver chefe
+                enemySpawnTimer++;
+                let maxSimultaneousEnemies = currentWave < 3 ? 1 : Math.min(4, Math.floor(currentWave / 2) + 1);
+
+                if (waveEnemiesSpawned < waveTotalEnemies) {
+                    if (enemies.length < maxSimultaneousEnemies && enemySpawnTimer > 70) {
+                        spawnEnemy();
+                        enemySpawnTimer = 0;
+                    }
+                } else if (enemies.length === 0 && waveBannerTimer <= 0) {
+                    startNextWave();
+                }
             }
 
             // Bullets logic
@@ -1052,19 +1147,75 @@
                 ctx.fill();
             });
 
-            // 10. Wave Banner
+            // 10. RENDER BOSS PLANET
+            if (bossActive && boss) {
+                ctx.save();
+                ctx.translate(boss.x, boss.y);
+
+                // Aura do Chefe
+                let bossGlow = ctx.createRadialGradient(0, 0, boss.radius * 0.8, 0, 0, boss.radius * 1.5);
+                bossGlow.addColorStop(0, 'rgba(244, 63, 94, 0.6)');
+                bossGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = bossGlow;
+                ctx.beginPath();
+                ctx.arc(0, 0, boss.radius * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Corpo do Planeta Chefe
+                ctx.rotate(boss.angle);
+                let bossGrad = ctx.createRadialGradient(-10, -10, 5, 0, 0, boss.radius);
+                bossGrad.addColorStop(0, '#f43f5e');
+                bossGrad.addColorStop(0.7, '#881337');
+                bossGrad.addColorStop(1, '#4c0519');
+                ctx.fillStyle = bossGrad;
+                ctx.beginPath();
+                ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Craters / Detalhes Malignos
+                ctx.fillStyle = '#27000a';
+                ctx.beginPath();
+                ctx.arc(-15, -10, 10, 0, Math.PI * 2);
+                ctx.arc(15, 12, 12, 0, Math.PI * 2);
+                ctx.arc(-5, 18, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+
+                // Barra de Vida do Chefe no Topo
+                ctx.save();
+                let barW = canvas.width * 0.6;
+                let barH = 12;
+                let barX = (canvas.width - barW) / 2;
+                let barY = 75;
+
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+
+                let healthRatio = Math.max(0, boss.hp / boss.maxHp);
+                ctx.fillStyle = '#f43f5e';
+                ctx.fillRect(barX, barY, barW * healthRatio, barH);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`CHEFE PLANETA - ONDA ${currentWave}`, canvas.width / 2, barY - 5);
+                ctx.restore();
+            }
+
+            // 11. Wave Banner
             if (waveBannerTimer > 0) {
                 ctx.save();
                 ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
                 ctx.fillRect(0, canvas.height * 0.35, canvas.width, 60);
 
-                ctx.fillStyle = '#ffb703';
+                ctx.fillStyle = currentWave % 10 === 0 ? '#f43f5e' : '#ffb703';
                 ctx.font = '900 24px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.shadowColor = '#fb8500';
+                ctx.shadowColor = currentWave % 10 === 0 ? '#e11d48' : '#fb8500';
                 ctx.shadowBlur = 10;
-                ctx.fillText(`ONDA ${currentWave}`, canvas.width / 2, canvas.height * 0.35 + 30);
+                ctx.fillText(currentWave % 10 === 0 ? `ALERTA: ONDA ${currentWave} - CHEFE!` : `ONDA ${currentWave}`, canvas.width / 2, canvas.height * 0.35 + 30);
                 ctx.restore();
             }
         }
