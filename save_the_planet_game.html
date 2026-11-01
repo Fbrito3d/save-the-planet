@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Save The Planet</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050515;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #101432 0%, #040614 100%);
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        /* UI overlay */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        /* Top Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1d529c, #0d2756);
+            border: 2px solid #4895ef;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
+        }
+
+        .logo-title {
+            text-align: center;
+        }
+
+        .logo-title h1 {
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px #4cc9f0, 2px 2px 0px #03045e;
+            line-height: 1;
+        }
+
+        .logo-title h2 {
+            color: #ffb703;
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 12px #fb8500, 2px 2px 0px #9d0208;
+            line-height: 1;
+        }
+
+        .score-box {
+            background: rgba(10, 20, 50, 0.7);
+            border: 2px solid #2a4365;
+            border-radius: 12px;
+            padding: 6px 14px;
+            text-align: right;
+            backdrop-filter: blur(5px);
+            min-width: 110px;
+        }
+
+        .score-label {
+            font-size: 10px;
+            color: #4cc9f0;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .score-value {
+            font-size: 18px;
+            color: #fff;
+            font-weight: 800;
+            font-family: monospace;
+        }
+
+        .damage-bar-container {
+            margin-top: 4px;
+            width: 100%;
+            height: 6px;
+            background: #1a202c;
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .damage-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #48bb78, #ecc94b, #f56565);
+            transition: width 0.3s ease;
+        }
+
+        /* Controls elevated for mobile / PC ergonomics */
+        .controls-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px 45px 10px;
+            pointer-events: auto;
+        }
+
+        .dpad {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-control {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            background: linear-gradient(145deg, #1a365d, #0f172a);
+            border: 2px solid #3182ce;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.2);
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .btn-control:active, .btn-control.active {
+            background: linear-gradient(145deg, #2b6cb0, #1a365d);
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        }
+
+        .btn-action {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #dd6b20, #9b2c2c);
+            border: 3px solid #f6ad55;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            box-shadow: 0 6px 18px rgba(221, 107, 32, 0.5), inset 0 2px 4px rgba(255,255,255,0.4);
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .btn-action:active, .btn-action.active {
+            background: linear-gradient(145deg, #c05621, #7b341e);
+            transform: scale(0.94);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        /* Modal Overlays */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 7, 20, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .modal-title {
+            color: #fff;
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px #4cc9f0;
+        }
+
+        .modal-btn {
+            margin-top: 25px;
+            padding: 14px 40px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            background: linear-gradient(135deg, #3182ce, #6366f1);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            transition: all 0.2s;
+        }
+
+        .modal-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="ui-layer">
+            <div class="header">
+                <button class="icon-btn" id="pause-btn">❚❚</button>
+                <div class="logo-title">
+                    <h1>SAVE</h1>
+                    <h2>PLANET</h2>
+                </div>
+                <div class="score-box">
+                    <div class="score-label">SCORE</div>
+                    <div class="score-value" id="score-val">000000</div>
+                    <div class="score-label" style="margin-top: 4px;">DESTRUÇÃO: <span id="dmg-txt" style="color:#48bb78;">0%</span></div>
+                    <div class="damage-bar-container">
+                        <div class="damage-bar-fill" id="dmg-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-container">
+                <div class="dpad">
+                    <div class="btn-control" id="btn-left">◄</div>
+                    <div class="btn-control" id="btn-right">►</div>
+                </div>
+                <div class="btn-action" id="btn-fire">🚀</div>
+            </div>
+        </div>
+
+        <!-- Start Modal -->
+        <div class="modal" id="start-modal">
+            <div class="logo-title" style="margin-bottom: 20px;">
+                <h1 style="font-size: 36px;">SAVE</h1>
+                <h2 style="font-size: 46px;">PLANET</h2>
+            </div>
+            <p style="color: #cbd5e0; text-align: center; max-width: 80%; font-size: 14px; line-height: 1.5;">
+                Defenda a Terra de ameaças no espaço!<br>
+                Suba de Nível e colete Power-ups.<br>
+                <b>Controles:</b> Teclas A/D ou Setas | Espaço para Atirar.
+            </p>
+            <button class="modal-btn" id="start-btn">JOGAR</button>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div class="modal hidden" id="gameover-modal">
+            <div class="modal-title" style="color: #f56565;">FIM DE JOGO</div>
+            <p style="color: #e2e8f0; font-size: 18px; margin-top: 10px;">O Planeta foi destruído!</p>
+            <p style="color: #4cc9f0; font-size: 24px; font-weight: bold; margin-top: 15px;" id="final-score">Pontuação: 0</p>
+            <button class="modal-btn" id="restart-btn">JOGAR NOVAMENTE</button>
+        </div>
+    </div>
+
+    <script>
+        // Sound Effects Generator (Web Audio API)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playShoot() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+            playExplode() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+            playPowerup() {
+                if (!this.ctx) return;
+                let osc = this.ctx.createOscillator();
+                let gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            let w = container.clientWidth;
+            let h = container.clientHeight;
+            
+            let aspect = 9 / 16;
+            let canvasW = w;
+            let canvasH = w / aspect;
+
+            if (canvasH > h) {
+                canvasH = h;
+                canvasW = h * aspect;
+            }
+
+            canvas.width = canvasW;
+            canvas.height = canvasH;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game State
+        let gameState = 'START';
+        let score = 0;
+        let planetHealth = 100;
+        let currentWave = 1;
+        let waveEnemiesSpawned = 0;
+        let waveTotalEnemies = 5;
+        let waveBannerTimer = 0;
+
+        // Entities
+        let stars = [];
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let powerups = [];
+        let planetDebris = [];
+        let planetCraters = [];
+
+        // Player / Ship Setup
+        const ship = {
+            angle: -Math.PI / 2,
+            orbitRadius: 0,
+            speed: 0.045,
+            weaponLevel: 1,
+            size: 16
+        };
+
+        // Planet Setup
+        const planet = {
+            x: 0,
+            y: 0,
+            radius: 55,
+            rotation: 0,
+            hitFlash: 0 // Efeito de piscar vermelho ao sofrer dano
+        };
+
+        // Input Handling
+        const keys = { left: false, right: false, fire: false };
+
+        function bindControl(elementId, keyName) {
+            const btn = document.getElementById(elementId);
+            const startEvent = (e) => {
+                e.preventDefault();
+                keys[keyName] = true;
+                btn.classList.add('active');
+                sfx.init();
+            };
+            const endEvent = (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+                btn.classList.remove('active');
+            };
+
+            btn.addEventListener('touchstart', startEvent, { passive: false });
+            btn.addEventListener('touchend', endEvent, { passive: false });
+            btn.addEventListener('touchcancel', endEvent, { passive: false });
+
+            btn.addEventListener('mousedown', startEvent);
+            btn.addEventListener('mouseup', endEvent);
+            btn.addEventListener('mouseleave', endEvent);
+        }
+
+        bindControl('btn-left', 'left');
+        bindControl('btn-right', 'right');
+        bindControl('btn-fire', 'fire');
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === ' ' || e.key === 'Spacebar') keys.fire = true;
+            sfx.init();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+            if (e.key === ' ' || e.key === 'Spacebar') keys.fire = false;
+        });
+
+        let canFire = true;
+        function fireWeapon() {
+            if (!canFire || gameState !== 'PLAYING') return;
+            canFire = false;
+
+            const shipX = planet.x + Math.cos(ship.angle) * ship.orbitRadius;
+            const shipY = planet.y + Math.sin(ship.angle) * ship.orbitRadius;
+
+            const dirX = Math.cos(ship.angle);
+            const dirY = Math.sin(ship.angle);
+
+            // Sistema de tiros evolutivos contínuos (Nível 1 até 5+)
+            if (ship.weaponLevel === 1) {
+                bullets.push({ x: shipX, y: shipY, vx: dirX * 7.5, vy: dirY * 7.5, radius: 4, color: '#4cc9f0' });
+            } else if (ship.weaponLevel === 2) {
+                let perpX = -dirY * 6;
+                let perpY = dirX * 6;
+                bullets.push({ x: shipX + perpX, y: shipY + perpY, vx: dirX * 8, vy: dirY * 8, radius: 4, color: '#48bb78' });
+                bullets.push({ x: shipX - perpX, y: shipY - perpY, vx: dirX * 8, vy: dirY * 8, radius: 4, color: '#48bb78' });
+            } else if (ship.weaponLevel === 3) {
+                let angles = [ship.angle - 0.2, ship.angle, ship.angle + 0.2];
+                angles.forEach(a => {
+                    bullets.push({
+                        x: shipX, y: shipY,
+                        vx: Math.cos(a) * 8.5,
+                        vy: Math.sin(a) * 8.5,
+                        radius: 5,
+                        color: '#ecc94b'
+                    });
+                });
+            } else if (ship.weaponLevel === 4) {
+                let perpX = -dirY * 5;
+                let perpY = dirX * 5;
+                let angles = [ship.angle - 0.15, ship.angle + 0.15];
+                angles.forEach(a => {
+                    bullets.push({ x: shipX + perpX, y: shipY + perpY, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, radius: 5, color: '#c084fc' });
+                    bullets.push({ x: shipX - perpX, y: shipY - perpY, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, radius: 5, color: '#c084fc' });
+                });
+            } else {
+                // Nível 5 ou superior: Super leque de 5 vias
+                let angles = [ship.angle - 0.35, ship.angle - 0.17, ship.angle, ship.angle + 0.17, ship.angle + 0.35];
+                angles.forEach(a => {
+                    bullets.push({
+                        x: shipX, y: shipY,
+                        vx: Math.cos(a) * 9.5,
+                        vy: Math.sin(a) * 9.5,
+                        radius: 5,
+                        color: '#38bdf8'
+                    });
+                });
+            }
+
+            sfx.playShoot();
+            let fireDelay = Math.max(90, 180 - (ship.weaponLevel * 15));
+            setTimeout(() => { canFire = true; }, fireDelay);
+        }
+
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < 90; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    alpha: Math.random()
+                });
+            }
+        }
+
+        function spawnEnemy() {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.max(canvas.width, canvas.height) * 0.65;
+            const spawnX = planet.x + Math.cos(angle) * distance;
+            const spawnY = planet.y + Math.sin(angle) * distance;
+
+            const dx = planet.x - spawnX;
+            const dy = planet.y - spawnY;
+            const len = Math.hypot(dx, dy);
+
+            // Ajuste de velocidade reduzida para objetos que vêm pelas laterais (esquerda/direita)
+            const isHorizontal = Math.abs(Math.cos(angle)) > Math.abs(Math.sin(angle));
+            let speedMultiplier = isHorizontal ? 0.65 : 1.0; 
+
+            const baseSpeed = (0.45 + (currentWave * 0.1)) * speedMultiplier;
+            const type = Math.random() > 0.4 ? 'asteroid' : 'alien';
+
+            enemies.push({
+                x: spawnX,
+                y: spawnY,
+                vx: (dx / len) * baseSpeed,
+                vy: (dy / len) * baseSpeed,
+                radius: type === 'asteroid' ? 15 : 13,
+                type: type,
+                hp: type === 'asteroid' ? 1 : 2,
+                angle: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.04
+            });
+            waveEnemiesSpawned++;
+        }
+
+        function startNextWave() {
+            currentWave++;
+            waveEnemiesSpawned = 0;
+            waveTotalEnemies = 4 + (currentWave * 2);
+            waveBannerTimer = 140;
+        }
+
+        function createPlanetDebris(x, y) {
+            for (let i = 0; i < 10; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let spd = 1 + Math.random() * 3.5;
+                planetDebris.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    radius: 2 + Math.random() * 3,
+                    color: Math.random() > 0.5 ? '#15803d' : '#2563eb',
+                    life: 60
+                });
+            }
+            let localAngle = Math.atan2(y - planet.y, x - planet.x) - planet.rotation;
+            planetCraters.push({ angle: localAngle, size: 4 + Math.random() * 5 });
+        }
+
+        function resetGame() {
+            score = 0;
+            planetHealth = 100;
+            currentWave = 1;
+            waveEnemiesSpawned = 0;
+            waveTotalEnemies = 5;
+            waveBannerTimer = 120;
+            ship.weaponLevel = 1;
+            ship.angle = -Math.PI / 2;
+            bullets = [];
+            enemies = [];
+            particles = [];
+            powerups = [];
+            planetDebris = [];
+            planetCraters = [];
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('score-val').innerText = score.toString().padStart(6, '0');
+            const dmgPercent = Math.max(0, 100 - planetHealth);
+            const dmgTxt = document.getElementById('dmg-txt');
+            dmgTxt.innerText = `${dmgPercent}%`;
+            
+            if (dmgPercent > 60) dmgTxt.style.color = '#f56565';
+            else if (dmgPercent > 30) dmgTxt.style.color = '#ecc94b';
+            else dmgTxt.style.color = '#48bb78';
+
+            document.getElementById('dmg-bar').style.width = `${dmgPercent}%`;
+        }
+
+        // Main Update Logic
+        let enemySpawnTimer = 0;
+
+        function update(delta) {
+            if (gameState !== 'PLAYING') return;
+
+            planet.x = canvas.width / 2;
+            planet.y = canvas.height / 2;
+            planet.radius = Math.min(canvas.width, canvas.height) * 0.125;
+            ship.orbitRadius = planet.radius + 34;
+            planet.rotation += 0.0025;
+
+            // Reduz o tempo de piscar vermelho do dano
+            if (planet.hitFlash > 0) planet.hitFlash--;
+
+            if (keys.left) ship.angle -= ship.speed;
+            if (keys.right) ship.angle += ship.speed;
+            if (keys.fire) fireWeapon();
+
+            if (waveBannerTimer > 0) waveBannerTimer--;
+
+            enemySpawnTimer++;
+            
+            let maxSimultaneousEnemies = currentWave < 3 ? 1 : Math.min(4, Math.floor(currentWave / 2) + 1);
+
+            if (waveEnemiesSpawned < waveTotalEnemies) {
+                if (enemies.length < maxSimultaneousEnemies && enemySpawnTimer > 70) {
+                    spawnEnemy();
+                    enemySpawnTimer = 0;
+                }
+            } else if (enemies.length === 0 && waveBannerTimer <= 0) {
+                startNextWave();
+            }
+
+            // Bullets logic
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.x += b.vx;
+                b.y += b.vy;
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Enemies logic
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.x += e.vx;
+                e.y += e.vy;
+                e.angle += e.rotSpeed;
+
+                let distToPlanet = Math.hypot(e.x - planet.x, e.y - planet.y);
+                if (distToPlanet <= planet.radius + e.radius) {
+                    planetHealth -= 10;
+                    planet.hitFlash = 15; // Ativa flash vermelho de impacto
+                    sfx.playExplode();
+                    createPlanetDebris(e.x, e.y);
+                    enemies.splice(i, 1);
+                    updateUI();
+
+                    if (planetHealth <= 0) {
+                        gameState = 'GAMEOVER';
+                        document.getElementById('final-score').innerText = `Pontuação: ${score}`;
+                        document.getElementById('gameover-modal').classList.remove('hidden');
+                    }
+                    continue;
+                }
+
+                // Bullet Collision
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
+                    let dist = Math.hypot(e.x - b.x, e.y - b.y);
+                    if (dist < e.radius + b.radius) {
+                        e.hp--;
+                        bullets.splice(j, 1);
+
+                        for (let p = 0; p < 6; p++) {
+                            particles.push({
+                                x: b.x, y: b.y,
+                                vx: (Math.random() - 0.5) * 4,
+                                vy: (Math.random() - 0.5) * 4,
+                                radius: 2,
+                                color: '#ffb703',
+                                life: 22
+                            });
+                        }
+
+                        if (e.hp <= 0) {
+                            score += e.type === 'asteroid' ? 100 : 200;
+                            sfx.playExplode();
+
+                            if (Math.random() < 0.35) {
+                                powerups.push({
+                                    x: e.x, y: e.y,
+                                    type: Math.random() < 0.7 ? 'weapon' : 'heal',
+                                    radius: 11,
+                                    pulse: 0
+                                });
+                            }
+
+                            enemies.splice(i, 1);
+                            updateUI();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Powerups logic
+            const shipX = planet.x + Math.cos(ship.angle) * ship.orbitRadius;
+            const shipY = planet.y + Math.sin(ship.angle) * ship.orbitRadius;
+
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                let p = powerups[i];
+                p.pulse += 0.05;
+
+                let dx = planet.x - p.x;
+                let dy = planet.y - p.y;
+                let len = Math.hypot(dx, dy);
+                p.x += (dx / len) * 0.3;
+                p.y += (dy / len) * 0.3;
+
+                let distToShip = Math.hypot(p.x - shipX, p.y - shipY);
+                if (distToShip < ship.size + p.radius) {
+                    sfx.playPowerup();
+                    if (p.type === 'weapon') {
+                        ship.weaponLevel++; // Evolução sem limite rígido curto
+                    } else {
+                        planetHealth = Math.min(100, planetHealth + 15);
+                        updateUI();
+                    }
+                    powerups.splice(i, 1);
+                } else if (len < planet.radius) {
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // Particle Updates
+            for (let i = planetDebris.length - 1; i >= 0; i--) {
+                let d = planetDebris[i];
+                d.x += d.vx;
+                d.y += d.vy;
+                d.life--;
+                if (d.life <= 0) planetDebris.splice(i, 1);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // --- Render Graphics ---
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Stars
+            ctx.fillStyle = '#ffffff';
+            stars.forEach(s => {
+                ctx.globalAlpha = s.alpha;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+
+            // 2. Orbit Ring
+            ctx.strokeStyle = 'rgba(76, 201, 240, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.arc(planet.x, planet.y, ship.orbitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 3. Planet Earth (Vibrant & Detailed Graphic matching image)
+            ctx.save();
+            ctx.translate(planet.x, planet.y);
+
+            // Outer Atmospheric Glow
+            let glowColor = planet.hitFlash > 0 ? 'rgba(239, 68, 68, 0.8)' : 'rgba(56, 189, 248, 0.5)';
+            let glow = ctx.createRadialGradient(0, 0, planet.radius * 0.85, 0, 0, planet.radius * 1.4);
+            glow.addColorStop(0, glowColor);
+            glow.addColorStop(0.7, planet.hitFlash > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(56, 189, 248, 0.15)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(0, 0, planet.radius * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Planet Ocean Base
+            let oceanGrad = ctx.createRadialGradient(-planet.radius*0.2, -planet.radius*0.2, 5, 0, 0, planet.radius);
+            if (planet.hitFlash > 0) {
+                oceanGrad.addColorStop(0, '#f87171');
+                oceanGrad.addColorStop(0.6, '#dc2626');
+                oceanGrad.addColorStop(1, '#991b1b');
+            } else {
+                oceanGrad.addColorStop(0, '#38bdf8');
+                oceanGrad.addColorStop(0.5, '#0284c7');
+                oceanGrad.addColorStop(1, '#0369a1');
+            }
+            ctx.fillStyle = oceanGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Earth Continents (Rotated Layer)
+            ctx.rotate(planet.rotation);
+            ctx.fillStyle = planet.hitFlash > 0 ? '#b91c1c' : '#22c55e'; // Fica vermelho escuro no dano
+
+            // Continentes estilizados da Terra
+            ctx.beginPath();
+            ctx.arc(planet.radius * 0.2, -planet.radius * 0.25, planet.radius * 0.42, 0, Math.PI * 2);
+            ctx.arc(-planet.radius * 0.35, planet.radius * 0.25, planet.radius * 0.38, 0, Math.PI * 2);
+            ctx.arc(planet.radius * 0.45, planet.radius * 0.35, planet.radius * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sombra 3D interna
+            let shadowGrad = ctx.createRadialGradient(planet.radius*0.3, planet.radius*0.3, planet.radius*0.4, 0, 0, planet.radius);
+            shadowGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            shadowGrad.addColorStop(1, 'rgba(0,10,30,0.45)');
+            ctx.fillStyle = shadowGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, planet.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Calotas polares
+            ctx.fillStyle = planet.hitFlash > 0 ? '#fca5a5' : '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, -planet.radius * 0.82, planet.radius * 0.28, 0, Math.PI * 2);
+            ctx.arc(0, planet.radius * 0.85, planet.radius * 0.22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dynamic Impact Craters
+            planetCraters.forEach(c => {
+                let cx = Math.cos(c.angle) * (planet.radius * 0.8);
+                let cy = Math.sin(c.angle) * (planet.radius * 0.8);
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(cx, cy, c.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+
+            // 4. Planet Debris
+            planetDebris.forEach(d => {
+                ctx.fillStyle = d.color;
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 5. Detailed Player Spaceship (White/Red Rocket)
+            const shipX = planet.x + Math.cos(ship.angle) * ship.orbitRadius;
+            const shipY = planet.y + Math.sin(ship.angle) * ship.orbitRadius;
+
+            ctx.save();
+            ctx.translate(shipX, shipY);
+            ctx.rotate(ship.angle + Math.PI / 2);
+
+            // Rocket Body
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -16);
+            ctx.bezierCurveTo(8, -5, 8, 8, 7, 12);
+            ctx.lineTo(-7, 12);
+            ctx.bezierCurveTo(-8, 8, -8, -5, 0, -16);
+            ctx.fill();
+
+            // Red Nose Cone & Trim
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(0, -16);
+            ctx.bezierCurveTo(4, -10, 4, -7, 5, -5);
+            ctx.lineTo(-5, -5);
+            ctx.bezierCurveTo(-4, -7, -4, -10, 0, -16);
+            ctx.fill();
+
+            // Glass Cockpit Window
+            ctx.fillStyle = '#38bdf8';
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, -1, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Side Wings / Fins
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(-7, 4);
+            ctx.lineTo(-12, 13);
+            ctx.lineTo(-7, 12);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(7, 4);
+            ctx.lineTo(12, 13);
+            ctx.lineTo(7, 12);
+            ctx.fill();
+
+            // Thruster Flame
+            ctx.fillStyle = Math.random() > 0.5 ? '#f97316' : '#ecc94b';
+            ctx.beginPath();
+            ctx.moveTo(-4, 12);
+            ctx.lineTo(0, 20 + Math.random() * 5);
+            ctx.lineTo(4, 12);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            // 6. Laser Bullets
+            bullets.forEach(b => {
+                ctx.fillStyle = b.color;
+                ctx.shadowColor = b.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // 7. Render Enemies (Detailed Meteors & Purple Alien Ships)
+            enemies.forEach(e => {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+
+                if (e.type === 'asteroid') {
+                    // Flaming Tail
+                    let tailAngle = Math.atan2(e.vy, e.vx) + Math.PI;
+                    ctx.save();
+                    ctx.rotate(tailAngle);
+                    let flameGrad = ctx.createLinearGradient(0, 0, 30, 0);
+                    flameGrad.addColorStop(0, 'rgba(239, 68, 68, 0.9)');
+                    flameGrad.addColorStop(0.5, 'rgba(249, 115, 22, 0.6)');
+                    flameGrad.addColorStop(1, 'rgba(234, 179, 8, 0)');
+                    ctx.fillStyle = flameGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(0, -e.radius * 0.7);
+                    ctx.lineTo(32 + Math.random() * 8, 0);
+                    ctx.lineTo(0, e.radius * 0.7);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Meteor Body with Craters
+                    ctx.rotate(e.angle);
+                    ctx.fillStyle = '#854d0e';
+                    ctx.strokeStyle = '#451a03';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, e.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Internal Craters & Magma Glow
+                    ctx.fillStyle = '#451a03';
+                    ctx.beginPath();
+                    ctx.arc(-e.radius * 0.3, -e.radius * 0.2, e.radius * 0.3, 0, Math.PI * 2);
+                    ctx.arc(e.radius * 0.3, e.radius * 0.3, e.radius * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Purple Alien Saucer/Ship
+                    ctx.rotate(e.angle);
+                    
+                    // Wings
+                    ctx.fillStyle = '#7e22ce';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, e.radius * 1.3, e.radius * 0.6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Dome Cockpit
+                    ctx.fillStyle = '#c084fc';
+                    ctx.beginPath();
+                    ctx.arc(0, -2, e.radius * 0.55, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Glowing Alien Lights
+                    ctx.fillStyle = '#f43f5e';
+                    ctx.beginPath();
+                    ctx.arc(-e.radius * 0.7, 1, 2.5, 0, Math.PI * 2);
+                    ctx.arc(0, 3, 2.5, 0, Math.PI * 2);
+                    ctx.arc(e.radius * 0.7, 1, 2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // 8. Power-ups
+            powerups.forEach(p => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                let scale = 1 + Math.sin(p.pulse) * 0.15;
+                ctx.scale(scale, scale);
+
+                ctx.fillStyle = p.type === 'weapon' ? '#ecc94b' : '#22c55e';
+                ctx.shadowColor = p.type === 'weapon' ? '#ecc94b' : '#22c55e';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.type === 'weapon' ? 'P' : '+', 0, 0);
+
+                ctx.restore();
+            });
+
+            // 9. Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 10. Wave Banner
+            if (waveBannerTimer > 0) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+                ctx.fillRect(0, canvas.height * 0.35, canvas.width, 60);
+
+                ctx.fillStyle = '#ffb703';
+                ctx.font = '900 24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = '#fb8500';
+                ctx.shadowBlur = 10;
+                ctx.fillText(`ONDA ${currentWave}`, canvas.width / 2, canvas.height * 0.35 + 30);
+                ctx.restore();
+            }
+        }
+
+        function gameLoop(timestamp) {
+            let delta = timestamp - lastTime;
+            lastTime = timestamp;
+
+            update(delta);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Event Handlers ---
+        document.getElementById('start-btn').addEventListener('click', () => {
+            sfx.init();
+            document.getElementById('start-modal').classList.add('hidden');
+            resetGame();
+            gameState = 'PLAYING';
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            sfx.init();
+            document.getElementById('gameover-modal').classList.add('hidden');
+            resetGame();
+            gameState = 'PLAYING';
+        });
+
+        document.getElementById('pause-btn').addEventListener('click', () => {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('pause-btn').innerText = '▶';
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('pause-btn').innerText = '❚❚';
+            }
+        });
+
+        let lastTime = performance.now();
+        initStars();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
